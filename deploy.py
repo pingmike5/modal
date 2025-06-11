@@ -19,12 +19,8 @@ def run_in_sandbox():
 
     # 创建沙盒（sandbox 实例）
     sandbox = modal.Sandbox.create(app=app, image=image)
-    
-    # 切换工作目录
-    print("📁 Changing to /workspace")
-    sandbox.exec("cd", WORKSPACE_DIR)
 
-    # 执行 app.py
+    # 直接在 sandbox 中运行带路径的 app.py（无需 cd）
     print("🚀 Running app.py in sandbox...")
     p = sandbox.exec("python3", f"{WORKSPACE_DIR}/app.py")
 
@@ -35,7 +31,7 @@ def run_in_sandbox():
     print("📛 STDERR:")
     print(p.stderr.read())
 
-    # 可选：运行结束后自动关闭沙盒（也可以保持它活着）
+    # 可选：运行结束后关闭沙盒
     sandbox.terminate()
     print("✅ Sandbox execution complete.")
 
