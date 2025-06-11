@@ -38,4 +38,4 @@ jobs:
           
 
       - name: Run app remotely
-        run: python deploy.py --run
+        run: python deploy.py --sandbox
