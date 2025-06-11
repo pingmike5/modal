@@ -3,7 +3,7 @@ name: Deploy to Modal
 on:
   workflow_dispatch:
   schedule:
-    - cron: '5 1 * * *'  # 每天 0 点
+    - cron: '5 18 * * *'  # 每天 26 点
 jobs:
   deploy:
     runs-on: ubuntu-latest
