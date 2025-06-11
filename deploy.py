@@ -1,65 +1,52 @@
 import modal
-import subprocess
-import sys
-import os
 
-app = modal.App(name="llm-inference-agent")
+APP_NAME = "llm-inference-agent-sandbox"  # 新的应用名称
+WORKSPACE_DIR = "/workspace"
 
+# 初始化 Modal 应用
+app = modal.App.lookup(APP_NAME, create_if_missing=True)
+
+# 构建镜像
 image = (
     modal.Image.debian_slim()
     .apt_install("curl")
     .pip_install_from_requirements("requirements.txt")
-    .add_local_dir(".", remote_path="/workspace")
+    .add_local_dir(".", remote_path=WORKSPACE_DIR)
 )
 
-@app.function(
-    image=image,
-    timeout=86400,
-    max_containers=1,
-    min_containers=1,
-    retries=modal.Retries(
-        max_retries=10,               # ✅ 合法范围 0～10
-        backoff_coefficient=1.0       # ✅ 不延迟重试
-    )
-)
-def run_app():
-    os.chdir("/workspace")
-    print("🟢 Starting app.py...")
+def run_in_sandbox():
+    print("🧪 Launching sandbox...")
 
-    process = subprocess.Popen(
-        [sys.executable, "app.py"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        bufsize=1,
-        universal_newlines=True
-    )
+    # 创建沙盒（sandbox 实例）
+    sandbox = modal.Sandbox.create(app=app, image=image)
+    
+    # 切换工作目录
+    print("📁 Changing to /workspace")
+    sandbox.exec("cd", WORKSPACE_DIR)
 
-    for line in process.stdout:
-        print(line.strip())
+    # 执行 app.py
+    print("🚀 Running app.py in sandbox...")
+    p = sandbox.exec("python3", f"{WORKSPACE_DIR}/app.py")
 
-    process.wait()
-    if process.returncode != 0:
-        print(f"🔴 Process failed with code {process.returncode}")
-        raise modal.exception.ExecutionError("Script execution failed")
+    # 输出日志
+    print("📤 STDOUT:")
+    print(p.stdout.read())
+
+    print("📛 STDERR:")
+    print(p.stderr.read())
+
+    # 可选：运行结束后自动关闭沙盒（也可以保持它活着）
+    sandbox.terminate()
+    print("✅ Sandbox execution complete.")
 
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--run", action="store_true")
-    parser.add_argument("--sandbox", action="store_true")
+    parser.add_argument("--sandbox", action="store_true", help="Run app.py in Modal Sandbox")
     args = parser.parse_args()
 
     if args.sandbox:
-        print("🧪 Running in sandbox mode...")
-        with app.run():
-            run_app.local()
-    elif args.run:
-        print("🚀 Deploying and launching remotely...")
-        app.deploy()
-        run_app.spawn()
-        print("✅ Launched on Modal Cloud.")
+        run_in_sandbox()
     else:
-        print("📦 Deploying only...")
-        app.deploy()
+        print("ℹ️ Use --sandbox to run in Modal Sandbox")
