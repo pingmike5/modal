@@ -14,12 +14,12 @@ image = (
 
 @app.function(
     image=image,
-    timeout=86400,            # 每次运行 24 小时
+    timeout=86400,
     max_containers=1,
     min_containers=1,
     retries=modal.Retries(
-        max_retries=10000,    # 自动重启最多 10000 次
-        backoff_coefficient=1.0  # 不延迟，失败后立即重试
+        max_retries=10,               # ✅ 合法范围 0～10
+        backoff_coefficient=1.0       # ✅ 不延迟重试
     )
 )
 def run_app():
