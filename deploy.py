@@ -1,14 +1,10 @@
 import modal
-import time
 
 APP_NAME = "llm-inference-agent-sandbox"
 WORKSPACE_DIR = "/workspace"
-SANDBOX_NAME = "main-sandbox"  # 给沙盒起名方便查找
 
-# 初始化应用
 app = modal.App.lookup(APP_NAME, create_if_missing=True)
 
-# 构建镜像
 image = (
     modal.Image.debian_slim()
     .apt_install("curl")
@@ -16,29 +12,18 @@ image = (
     .add_local_dir(".", remote_path=WORKSPACE_DIR)
 )
 
-def run_in_fresh_sandbox():
-    print("🔍 Checking existing sandbox...")
+def run_in_sandbox():
+    print("🧪 Launching sandbox...")
 
-    # 查看是否已有沙盒，存在就终止
-    existing = modal.Sandbox.lookup(SANDBOX_NAME, app=app, raise_if_not_found=False)
-    if existing:
-        print("🛑 Terminating existing sandbox...")
-        existing.terminate()
-        existing.wait(raise_on_termination=False)
-        print("✅ Terminated.")
+    sandbox = modal.Sandbox.create(app=app, image=image,timeout=86400)
 
-    print("🚀 Launching new sandbox...")
-    sandbox = modal.Sandbox.create(
-        name=SANDBOX_NAME,
-        app=app,
-        image=image,
-        timeout=86400,  # 如果你需要共享 volume，可在此配置
-    )
+    # ✅ 后台执行 app.py，不阻塞 GitHub Actions
+    print("🚀 Running app.py in sandbox (background)...")
+    sandbox.exec("sh", "-c", f"cd {WORKSPACE_DIR} && nohup python3 app.py > /dev/null 2>&1 &")
 
-    print("📁 Launching app.py (background)...")
-    sandbox.exec("python3", f"{WORKSPACE_DIR}/app.py")
-
-    print("✅ New sandbox launched.")
+    print("✅ Launched app.py in sandbox.")
+    # 不 terminate，保留沙盒运行
+    # sandbox.terminate()
 
 if __name__ == "__main__":
     import argparse
@@ -48,6 +33,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.sandbox:
-        run_in_fresh_sandbox()
+        run_in_sandbox()
     else:
         print("ℹ️ Use --sandbox to run in Modal Sandbox")
