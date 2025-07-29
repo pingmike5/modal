@@ -15,7 +15,7 @@ image = (
 def run_in_sandbox():
     print("🧪 Launching sandbox...")
 
-    sandbox = modal.Sandbox.create(app=app, image=image,timeout=86400)
+    sandbox = modal.Sandbox.create(app=app, image=image,timeout=86400,region="ap-southeast")
 
     # ✅ 后台执行 app.py，不阻塞 GitHub Actions
     print("🚀 Running app.py in sandbox (background)...")
